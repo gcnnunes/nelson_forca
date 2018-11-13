@@ -75,15 +75,15 @@ int main(int argc, char **argv) {
 
    if (opcao == 1) {
       printf("\n A partida de jogo da forca começou! \n \n");
-      printf("Você possui 6 vidas.");
+      printf("Você possui 6 vidas.\n");
       doit(sockfd);
-   } 
+   }
    else {
-      
+
    }
 /*     else if opcao == 2 {
 
-   } 
+   }
    else {
 
    }*/
@@ -111,7 +111,7 @@ void doit(int sockfd) {
        }
        if (FD_ISSET(STDIN_FILENO, &fdset)) {
            // if (fgets(sendline, MAXLINE, stdin) != NULL) /* tem algo disponivel para enviar */
-           //     write(sockfd, sendline, strlen(sendline));           
+           //     write(sockfd, sendline, strlen(sendline));
            // else return; /* leu tudo que enviou */
           return;
        }
