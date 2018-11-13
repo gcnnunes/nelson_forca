@@ -105,15 +105,15 @@ void doit(int sockfd) {
         maxfds = sockfd+1; /* stdin sempre vai ser menor do que sockfd, entao pega direto o valor de sockfd como limitante superior */
         select(maxfds, &fdset, NULL, NULL, NULL);
         if(FD_ISSET(sockfd, &fdset)) { /* atividade no socket */
-           if (Readline(sockfd, recvline, MAXLINE) == 0)
+           if (Readline(sockfd, recvline, MAXLINE) <= 0)
                perror("readline");
-           printf("A palavra é: %s \n", recvline);
-//           readmsgs++;
-//       }
-       if (FD_ISSET(STDIN_FILENO, &fdset)) {
-           if (fgets(sendline, MAXLINE, stdin) != NULL) /* tem algo disponivel para enviar */
-               write(sockfd, sendline, strlen(sendline));           
-           else return; /* leu tudo que enviou */
+           printf("O tamanho da palavra é: %s \n", recvline);
        }
-   }
+       if (FD_ISSET(STDIN_FILENO, &fdset)) {
+           // if (fgets(sendline, MAXLINE, stdin) != NULL) /* tem algo disponivel para enviar */
+           //     write(sockfd, sendline, strlen(sendline));           
+           // else return; /* leu tudo que enviou */
+          return;
+       }
+//   }
 }

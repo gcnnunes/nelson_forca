@@ -16,17 +16,19 @@
 #define MAXDATASIZE 4096         
 #define EXIT_COMMAND "exit\n"
 
-void doit(int connfd, struct sockaddr_in clientaddr);
+void doit(int connfd, struct sockaddr_in clientaddr, char *line);
 
 int main (int argc, char **argv) {
    int    listenfd,              
           connfd,               
-          port;                  
+          port;                            
    struct sockaddr_in servaddr;  
    char   error[MAXDATASIZE + 1];    
    char   *line = NULL;
+   char wordsize;
    size_t len = MAXDATASIZE;
    ssize_t read;
+
  
 
    if (argc != 2) {
@@ -40,11 +42,6 @@ int main (int argc, char **argv) {
    FILE *fp = fopen("dicionario.txt","r");
    if (fp == NULL)
       exit(EXIT_FAILURE);
-
-   if ((read = getline(&line, &len, fp)) == -1) 
-      exit(EXIT_FAILURE);    
-
-   fclose(fp);
 
    port = atoi(argv[1]);
 
@@ -67,12 +64,17 @@ int main (int argc, char **argv) {
 
       connfd = Accept(listenfd, (struct sockaddr *) &clientaddr, &clientaddr_len);
 
-      write(connfd, line, strlen(line));
+      if ((read = getline(&line, &len, fp)) == -1) 
+         exit(EXIT_FAILURE);          
+
+      wordsize = strlen(line)+'0';
+      write(connfd, &wordsize, sizeof(wordsize));
 
       if((pid = fork()) == 0) {
          Close(listenfd);
-         
-         doit(connfd, clientaddr);
+         fclose(fp);
+
+         doit(connfd, clientaddr, line);
 
          Close(connfd);
 
@@ -81,11 +83,12 @@ int main (int argc, char **argv) {
 
       Close(connfd);
    }
-   
+
+   fclose(fp);   
    return(0);
 }
 
-void doit(int connfd, struct sockaddr_in clientaddr) {
+void doit(int connfd, struct sockaddr_in clientaddr, char *line) {
    char recvline[MAXDATASIZE + 1];
    int n;                  
    socklen_t remoteaddr_len = sizeof(clientaddr);
