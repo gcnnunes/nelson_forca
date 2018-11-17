@@ -71,8 +71,7 @@ int main (int argc, char **argv) {
             exit(EXIT_FAILURE);
       }
 
-      sprintf(wordsize, "%d", strlen(line));
-      printf("wordize = %s\n", wordsize);
+      sprintf(wordsize, "%lu", strlen(line)-1);
 
       write(connfd, &wordsize, strlen(wordsize));
 

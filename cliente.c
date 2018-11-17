@@ -15,6 +15,8 @@
 
 #define MAXLINE 4096
 
+int vidas = 6;
+
 /* copiado do livro */
 ssize_t Readline (int fd, void *vptr, size_t maxlen) {
     ssize_t n, rc;
@@ -70,12 +72,12 @@ int main(int argc, char **argv) {
 
    Connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
 
-   printf("\n\n Seja bem vindo ao jogo de forca do Nelsão!\n \n \n Escolha uma opção: \n 1) Iniciar partida simples \n 2) Ser carrasco ao iniciar partida \n 3) Multiplayer \n \n");
+   printf("\n\nSeja bem vindo ao jogo de forca do Nelsão!\n \n \nEscolha uma opção: \n1) Iniciar partida simples \n2) Ser carrasco ao iniciar partida \n3) Multiplayer \n \n");
    scanf("%d", &opcao);
 
    if (opcao == 1) {
-      printf("\n A partida de jogo da forca começou! \n \n");
-      printf("Você possui 6 vidas.\n");
+      printf("\nA partida de jogo da forca começou! \n \n");
+      printf("Você possui %d vidas.\n", vidas);
       doit(sockfd);
    }
    else {
@@ -95,25 +97,30 @@ void doit(int sockfd) {
     fd_set fdset;
     int maxfds;
     char recvline[MAXLINE];
-    char sendline[MAXLINE];
+    char sendline[MAXLINE], letra;
     int lines = 0, ch = 0;
 
     FD_ZERO(&fdset);
-//    while(1) {
-        FD_SET(STDIN_FILENO, &fdset);
-        FD_SET(sockfd, &fdset);
-        maxfds = sockfd+1; /* stdin sempre vai ser menor do que sockfd, entao pega direto o valor de sockfd como limitante superior */
-        select(maxfds, &fdset, NULL, NULL, NULL);
-        if(FD_ISSET(sockfd, &fdset)) { /* atividade no socket */
-           if (Readline(sockfd, recvline, MAXLINE) <= 0)
-               perror("readline");
-           printf("O tamanho da palavra é: %s \n", recvline);
-       }
-       if (FD_ISSET(STDIN_FILENO, &fdset)) {
-           // if (fgets(sendline, MAXLINE, stdin) != NULL) /* tem algo disponivel para enviar */
-           //     write(sockfd, sendline, strlen(sendline));
-           // else return; /* leu tudo que enviou */
-          return;
-       }
-//   }
+    while(vidas > 0) {
+      FD_SET(STDIN_FILENO, &fdset);
+      FD_SET(sockfd, &fdset);
+      maxfds = sockfd+1; /* stdin sempre vai ser menor do que sockfd, entao pega direto o valor de sockfd como limitante superior */
+      select(maxfds, &fdset, NULL, NULL, NULL);
+      if(FD_ISSET(sockfd, &fdset)) { /* atividade no socket */
+        if (Readline(sockfd, recvline, MAXLINE) <= 0) {
+          perror("readline");
+        }
+        printf("O tamanho da palavra é: %s \n", recvline);
+        int tamanho = recvline[0] - '0';
+        printf("_");
+        for (int i = 1; i < tamanho; i++) {
+          printf(" _");
+        }
+        printf("\n\nDigite uma letra: ");
+        scanf(" %c", &letra);
+      }
+      if (FD_ISSET(STDIN_FILENO, &fdset)) {
+        write(sockfd, &letra, 1);
+      }
+    }
 }
