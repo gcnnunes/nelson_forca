@@ -19,4 +19,4 @@ servidor: servidor.c $(LIB_CODE) $(LIB_HEADER)
 
 .PHONY: clean
 clean:
-	rm -f cliente servidor cliente servidor 
+	rm -f cliente servidor cliente servidor  

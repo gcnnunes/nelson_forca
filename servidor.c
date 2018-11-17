@@ -16,7 +16,8 @@
 #define MAXDATASIZE 4096
 #define EXIT_COMMAND "exit\n"
 
-void doit(int connfd, struct sockaddr_in clientaddr, char *line);
+void doit(int connfd, struct sockaddr_in clientaddr, char *word);
+char   *word = NULL;
 
 int main (int argc, char **argv) {
    int    listenfd,
@@ -24,7 +25,6 @@ int main (int argc, char **argv) {
           port;
    struct sockaddr_in servaddr;
    char   error[MAXDATASIZE + 1];
-   char   *line = NULL;
    char wordsize[100];
    size_t len = MAXDATASIZE;
    ssize_t read;
@@ -55,6 +55,8 @@ int main (int argc, char **argv) {
 
    Listen(listenfd, LISTENQ);
 
+   printf("OLA\n");
+
 
    for ( ; ; ) {
       pid_t pid;
@@ -64,29 +66,33 @@ int main (int argc, char **argv) {
 
       connfd = Accept(listenfd, (struct sockaddr *) &clientaddr, &clientaddr_len);
 
-      line = NULL;
-      if ((read = getline(&line, &len, fp)) == -1) {
+      word = NULL;
+      if ((read = getline(&word, &len, fp)) == -1) {
         fp = fopen("dicionario.txt","r"); // loop pro começo do arquivo
-        if ((read = getline(&line, &len, fp)) == -1) // se falhar mesmo tentando abrir o arquivo de novo
+        if ((read = getline(&word, &len, fp)) == -1) // se falhar mesmo tentando abrir o arquivo de novo
             exit(EXIT_FAILURE);
       }
 
-      sprintf(wordsize, "%lu", strlen(line)-1);
+      printf("OLA 2\n");
+
+      sprintf(wordsize, "%lu", strlen(word)-1);
 
       write(connfd, &wordsize, strlen(wordsize));
+
+      printf("OLA 3\n");
 
       if((pid = fork()) == 0) {
          Close(listenfd);
          fclose(fp);
+         printf("OLA 4\n");
 
-         doit(connfd, clientaddr, line);
-
+         doit(connfd, clientaddr, word);
          Close(connfd);
 
          exit(0);
       }
 
-      free(line);
+      free(word);
       Close(connfd);
    }
 
@@ -94,26 +100,54 @@ int main (int argc, char **argv) {
    return(0);
 }
 
-void doit(int connfd, struct sockaddr_in clientaddr, char *line) {
+int find_char(char *str, char c)
+{
+   int i,f,lenf=0;
+   lenf=strlen(str);
+   for(i=0;i<lenf;i++)
+   {
+      if(str[i]==c)
+      {
+         printf("character position:%d\n",i+1);
+         f=1;
+      }
+   }
+   if(f==0)
+   {
+      printf("\ncharacter not found");
+      return(1);
+   }
+
+   return(0);
+}
+
+void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
    char recvline[MAXDATASIZE + 1];
    int n;
+   int positions[20];
    socklen_t remoteaddr_len = sizeof(clientaddr);
+   printf("OLA 5\n");
 
-   // while ((n = read(connfd, recvline, MAXDATASIZE)) > 0) {
-   //    recvline[n] = 0;
-   //
-   //    if (getpeername(connfd, (struct sockaddr *) &clientaddr, &remoteaddr_len) == -1) {
-   //       perror("getpeername() failed");
-   //       return;
-   //    }
-   //
-   //    printf("<%s-%d>: %s\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port), recvline);
-   //
-   //    if(strcmp(recvline, EXIT_COMMAND) == 0) {
-   //       break;
-   //    }
-   //
-   //    write(connfd, recvline, strlen(recvline));
-   //
-   // }
+//   while ((n = read(connfd, recvline, MAXDATASIZE)) > 0) {
+   while (1) {      
+      printf("OLA 6\n");      
+      n = read(connfd, recvline, MAXDATASIZE);
+      recvline[n] = 0;
+      if (getpeername(connfd, (struct sockaddr *) &clientaddr, &remoteaddr_len) == -1) {
+         perror("getpeername() failed");
+         return;
+      }
+
+      printf("OLA 7\n");
+   
+      printf("<%s-%d>: %s\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port), recvline);
+   
+      positions[0] = find_char(word, recvline[0]); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
+
+      if(strcmp(recvline, EXIT_COMMAND) == 0) {
+         break;
+      }
+   
+      write(connfd, recvline, strlen(recvline));  
+   }
 }
