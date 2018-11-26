@@ -105,6 +105,7 @@ void doit(int sockfd) {
     char recvline[MAXLINE], rdline[MAXLINE];
     char sendline[MAXLINE], letra;
     int lines = 0, ch = 0;
+    bool esperandoResposta = false;
 
 
     FD_ZERO(&fdset);
@@ -116,22 +117,25 @@ void doit(int sockfd) {
         printf(" _");
       }
       printf("\n\nDigite uma letra: ");
+      
       while(true) {
         FD_SET(STDIN_FILENO, &fdset);
         FD_SET(sockfd, &fdset);
         maxfds = MAX(STDIN_FILENO, sockfd) + 1;
         select(maxfds, &fdset, NULL, NULL, NULL);
-        if (FD_ISSET(STDIN_FILENO, &fdset)) {
+        if (FD_ISSET(STDIN_FILENO, &fdset) && !esperandoResposta) {
           Readline(STDIN_FILENO, rdline, MAXLINE);
           printf("\nString lida com sucesso! E ela é %s\n", rdline);
           letra = rdline[0];
           printf("Enviando %c...\n", letra);
           write(sockfd, &letra, 1);
+          esperandoResposta = true;
         }
         if (FD_ISSET(sockfd, &fdset)) {
           printf("\n\nRecebi algo! Vulgo: ");
           Readline(sockfd, recvline, MAXLINE);
           printf("%s", recvline);
+          esperandoResposta = false;
           break;
         }
       }
