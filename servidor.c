@@ -55,9 +55,6 @@ int main (int argc, char **argv) {
 
    Listen(listenfd, LISTENQ);
 
-   printf("OLA\n");
-
-
    for ( ; ; ) {
       pid_t pid;
 
@@ -73,18 +70,13 @@ int main (int argc, char **argv) {
             exit(EXIT_FAILURE);
       }
 
-      printf("OLA 2\n");
-
       sprintf(wordsize, "%lu", strlen(word)-1);
 
       write(connfd, &wordsize, strlen(wordsize));
 
-      printf("OLA 3\n");
-
       if((pid = fork()) == 0) {
          Close(listenfd);
          fclose(fp);
-         printf("OLA 4\n");
 
          doit(connfd, clientaddr, word);
          Close(connfd);
@@ -102,35 +94,35 @@ int main (int argc, char **argv) {
 
 int find_char(char *str, char c)
 {
-   int i,f,lenf=0;
+   int i,f=0,lenf=0;
    lenf=strlen(str);
    for(i=0;i<lenf;i++)
    {
       if(str[i]==c)
       {
          printf("character position:%d\n",i+1);
-         f=1;
+         f=i+1;
+         break;
       }
    }
    if(f==0)
    {
-      printf("\ncharacter not found");
-      return(1);
+      printf("\ncharacter not found\n");
+      return(0);
    }
 
-   return(0);
+   return(f);
 }
 
 void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
    char recvline[MAXDATASIZE + 1];
    int n;
-   int positions[20];
+   int position;
+   char pos[2];
    socklen_t remoteaddr_len = sizeof(clientaddr);
-   printf("OLA 5\n");
 
 //   while ((n = read(connfd, recvline, MAXDATASIZE)) > 0) {
-   while (1) {      
-      printf("OLA 6\n");      
+   while (1) {
       n = read(connfd, recvline, MAXDATASIZE);
       recvline[n] = 0;
       if (getpeername(connfd, (struct sockaddr *) &clientaddr, &remoteaddr_len) == -1) {
@@ -138,16 +130,22 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
          return;
       }
 
-      printf("OLA 7\n");
-   
       printf("<%s-%d>: %s\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port), recvline);
-   
-      positions[0] = find_char(word, recvline[0]); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
 
       if(strcmp(recvline, EXIT_COMMAND) == 0) {
          break;
       }
-   
-      write(connfd, recvline, strlen(recvline));  
+
+      position = find_char(word, recvline[0]); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
+
+      printf("position = %d\n", position);
+
+      sprintf(pos, "%d\n", position);
+
+      printf("Enviando %s...\n", pos);
+
+      write(connfd, &pos, sizeof(pos));
+
+      printf("Enviou %s.\n", pos);
    }
 }

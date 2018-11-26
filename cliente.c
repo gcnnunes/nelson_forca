@@ -25,12 +25,9 @@ ssize_t Readline (int fd, void *vptr, size_t maxlen) {
     ssize_t n, rc;
     char c, *ptr;
 
-    printf("OLA READ \n");
-
     ptr = vptr;
     for (n=1; n<maxlen; n++) {
         again:
-        printf("OLA READ 2\n");
         if ( (rc = read(fd, &c, 1)) == 1) {
             *ptr++ = c;
             if (c == '\n')
@@ -105,34 +102,38 @@ int main(int argc, char **argv) {
 void doit(int sockfd) {
     fd_set fdset;
     int maxfds;
-    char recvline[MAXLINE];
+    char recvline[MAXLINE], rdline[MAXLINE];
     char sendline[MAXLINE], letra;
     int lines = 0, ch = 0;
 
+
     FD_ZERO(&fdset);
-    printf("OLA\n");
     while(vidas > 0) {
-      FD_SET(STDIN_FILENO, &fdset);
-      FD_SET(sockfd, &fdset);
-      maxfds = MAX(STDIN_FILENO, sockfd) + 1; 
-      printf("OLA 2\n");
-//      maxfds = sockfd + 1; 
+//      maxfds = sockfd + 1;
       printf("O tamanho da palavra é: %d \n", tamanho);
       printf("_");
       for (int i = 1; i < tamanho; i++) {
         printf(" _");
-      }      
-      printf("\n\n");
-      select(maxfds, &fdset, NULL, NULL, NULL);
-      if(FD_ISSET(sockfd, &fdset)) { /* atividade no socket */
-        printf("OLA 3\n");
-        printf("\n\nDigite uma letra: ");
-        scanf(" %c", &letra);
-        write(sockfd, &letra, 1);
       }
-      if (FD_ISSET(STDIN_FILENO, &fdset)) {
-        printf("\n\nEntrou aqui!!!!");
-        write(sockfd, &letra, 1);
+      printf("\n\nDigite uma letra: ");
+      while(true) {
+        FD_SET(STDIN_FILENO, &fdset);
+        FD_SET(sockfd, &fdset);
+        maxfds = MAX(STDIN_FILENO, sockfd) + 1;
+        select(maxfds, &fdset, NULL, NULL, NULL);
+        if (FD_ISSET(STDIN_FILENO, &fdset)) {
+          Readline(STDIN_FILENO, rdline, MAXLINE);
+          printf("\nString lida com sucesso! E ela é %s\n", rdline);
+          letra = rdline[0];
+          printf("Enviando %c...\n", letra);
+          write(sockfd, &letra, 1);
+        }
+        if (FD_ISSET(sockfd, &fdset)) {
+          printf("\n\nRecebi algo! Vulgo: ");
+          Readline(sockfd, recvline, MAXLINE);
+          printf("%s", recvline);
+          break;
+        }
       }
     }
 }
