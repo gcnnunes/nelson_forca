@@ -19,7 +19,8 @@
 
 
 int vidas = 6;
-int tamanho;
+int tamanho = 0;
+char letra;
 
 /* copiado do livro */
 ssize_t Readline (int fd, void *vptr, size_t maxlen) {
@@ -102,20 +103,28 @@ int main(int argc, char **argv) {
 
 void doit(int sockfd) {
     fd_set fdset;
-    int maxfds;
+    int maxfds, i;
     char recvline[MAXLINE], rdline[MAXLINE];
-    char sendline[MAXLINE], letra;
-    int lines = 0, ch = 0;
+    char sendline[MAXLINE], vetorPalavra[tamanho];
+    int lines = 0, ch = 0, position = 0;
     bool esperandoResposta = false;
 
 
     FD_ZERO(&fdset);
+
+//    vetorPalavra[0] = "_";
+    for (int i = 0; i < tamanho; i++)
+      vetorPalavra[i] = '_';
+
+
     while(vidas > 0) {
 //      maxfds = sockfd + 1;
       printf("O tamanho da palavra é: %d \n", tamanho);
-      printf("_");
-      for (int i = 1; i < tamanho; i++) {
-        printf(" _");
+      printf("Você possui %d vidas.\n", vidas);
+
+
+      for (int i = 0; i < tamanho; i++) {
+        printf("%c ", vetorPalavra[i]);
       }
       printf("\n\nDigite uma letra:\n");
 
@@ -135,6 +144,28 @@ void doit(int sockfd) {
           Readline(sockfd, recvline, MAXLINE);
           printf("\n\nRecebi: %s", recvline);
           esperandoResposta = false;
+          i = 0;
+          while (recvline[i] != '\n') {
+            if (recvline[i] == '#') {
+              vidas = 0;
+              printf("Você perdeu o jogo!\n");
+            }
+            else if (recvline[i] == '!') {
+              vidas = 0;
+              printf("Parabéns! Você venceu o jogo!\n");
+            }
+            else if (recvline[i] == ';') {
+              continue;
+            }
+            else if (recvline[i] == '0') { // letra chutada não existe na palavra
+              vidas--;
+            }
+            else {
+              position = recvline[i]-'0';
+              vetorPalavra[position-1] = letra;
+            }
+            i++;
+          }
           break;
         }
       }
