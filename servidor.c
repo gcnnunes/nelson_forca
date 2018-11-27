@@ -94,30 +94,30 @@ int main (int argc, char **argv) {
    return(0);
 }
 
-int find_char(char *str, char c)
+void find_char(char * word, char c, char * returnString)
 {
-   int i,f=0,lenf=0;
-   lenf=strlen(str);
-   for(i=0;i<lenf;i++)
-   {
-      if(str[i]==c)
-      {
-//         printf("character position:%d\n",i+1);
-         f=i+1;
-         break;
+   int i, f=0, lenf=0;
+   char temp[MAXDATASIZE];
+   lenf = strlen(word);
+
+   sprintf(returnString, "");
+
+   for(i=0;i<lenf;i++) {
+      if(word[i] == c) {
+          sprintf(temp, "%d;", i+1);
+          strcat(returnString, temp);
       }
    }
-   if(f==0)
-   {
-//      printf("\ncharacter not found\n");
-      return(0);
-   }
-
-   return(f);
+   if (strcmp(returnString, "") == 0)
+     strcat(returnString, "0");
+   strcat(returnString, "\n");
+   printf("%s", returnString);
+   return;
 }
 
 void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
    char recvline[MAXDATASIZE + 1];
+   char sendline[MAXDATASIZE + 1];
    int n;
    int position;
    char pos[2];
@@ -136,20 +136,20 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
 //      printf("<%s-%d>: %s\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port), recvline);
 
       if(strcmp(recvline, EXIT_COMMAND) == 0) {
+         printf("Recebeu exit.\n");
          break;
       }
 
       if (n == 2) { // recebeu um caractere
-        position = find_char(word, recvline[0]); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
-        sprintf(pos, "%d\n", position);
-        write(connfd, &pos, sizeof(pos));
+        find_char(word, recvline[0], sendline); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
+        write(connfd, sendline, strlen(sendline));
       }
       else { // recebeu uma tentativa de palavra (ou um \n sozinho invalido)
         if(strcmp(recvline, word) == 0)
-          sprintf(pos, "!\n"); // sinaliza que ganhou o jogo
+          sprintf(sendline, "!\n"); // sinaliza que ganhou o jogo
         else
-          sprintf(pos, "#\n"); // sinaliza que perdeu o jogo
-        write(connfd, &pos, sizeof(pos));
+          sprintf(sendline, "#\n"); // sinaliza que perdeu o jogo
+        write(connfd, sendline, strlen(sendline));
       }
    }
 }

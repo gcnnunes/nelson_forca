@@ -85,7 +85,6 @@ int main(int argc, char **argv) {
 
   if (opcao == 1) {
     printf("\nA partida de jogo da forca começou! \n \n");
-    printf("Você possui %d vidas.\n", vidas);
     doit(sockfd);
   }
   else {
@@ -103,7 +102,7 @@ int main(int argc, char **argv) {
 
 void doit(int sockfd) {
     fd_set fdset;
-    int maxfds, i;
+    int maxfds, i, letrasRestantes = tamanho;
     char recvline[MAXLINE], rdline[MAXLINE];
     char sendline[MAXLINE], vetorPalavra[tamanho];
     int lines = 0, ch = 0, position = 0;
@@ -119,12 +118,18 @@ void doit(int sockfd) {
 
     while(vidas > 0) {
 //      maxfds = sockfd + 1;
+      printf("\n============================================\n\n");
       printf("O tamanho da palavra é: %d \n", tamanho);
       printf("Você possui %d vidas.\n", vidas);
 
 
       for (int i = 0; i < tamanho; i++) {
         printf("%c ", vetorPalavra[i]);
+      }
+      if (letrasRestantes == 0) {
+        printf("\n\nParabéns! Você venceu o jogo!\n");
+        write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
+        return;
       }
       printf("\n\nDigite uma letra:\n");
 
@@ -138,23 +143,25 @@ void doit(int sockfd) {
           write(sockfd, rdline, strlen(rdline));
           if (strcmp(rdline, EXIT_COMMAND) == 0)
             return;
+          letra = rdline[0];
           esperandoResposta = true;
         }
         if (FD_ISSET(sockfd, &fdset) && esperandoResposta) {
           Readline(sockfd, recvline, MAXLINE);
-          printf("\n\nRecebi: %s", recvline);
-          esperandoResposta = false;
           i = 0;
           while (recvline[i] != '\n') {
             if (recvline[i] == '#') {
               vidas = 0;
               printf("Você perdeu o jogo!\n");
+              write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
             }
             else if (recvline[i] == '!') {
               vidas = 0;
               printf("Parabéns! Você venceu o jogo!\n");
+              write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
             }
             else if (recvline[i] == ';') {
+              i++;
               continue;
             }
             else if (recvline[i] == '0') { // letra chutada não existe na palavra
@@ -163,11 +170,14 @@ void doit(int sockfd) {
             else {
               position = recvline[i]-'0';
               vetorPalavra[position-1] = letra;
+              letrasRestantes--;
             }
             i++;
           }
+          esperandoResposta = false;
           break;
         }
+        // fim do while true
       }
     }
 }
