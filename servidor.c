@@ -124,6 +124,7 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
 //   while ((n = read(connfd, recvline, MAXDATASIZE)) > 0) {
    while (1) {
       n = read(connfd, recvline, MAXDATASIZE);
+      printf("n = %d\n", n);
       recvline[n] = 0;
       if (getpeername(connfd, (struct sockaddr *) &clientaddr, &remoteaddr_len) == -1) {
          perror("getpeername() failed");
@@ -136,16 +137,17 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
          break;
       }
 
-      position = find_char(word, recvline[0]); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
-
-      printf("position = %d\n", position);
-
-      sprintf(pos, "%d\n", position);
-
-      printf("Enviando %s...\n", pos);
-
-      write(connfd, &pos, sizeof(pos));
-
-      printf("Enviou %s.\n", pos);
+      if (n == 2) { // recebeu um caractere
+        position = find_char(word, recvline[0]); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
+        sprintf(pos, "%d\n", position);
+        write(connfd, &pos, sizeof(pos));
+      }
+      else { // recebeu uma tentativa de palavra (ou um \n sozinho invalido)
+        if(strcmp(recvline, word) == 0)
+          sprintf(pos, "!\n"); // sinaliza que ganhou o jogo
+        else
+          sprintf(pos, "#\n"); // sinaliza que perdeu o jogo
+        write(connfd, &pos, sizeof(pos));
+      }
    }
 }

@@ -12,6 +12,7 @@
 
 #include "basic.h"
 #include "socket_helper.h"
+#define EXIT_COMMAND "exit\n"
 
 #define MAXLINE 4096
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -87,7 +88,7 @@ int main(int argc, char **argv) {
     doit(sockfd);
   }
   else {
-
+    printf("Desculpe, esta opção ainda não está implementada.\n");
   }
 /*     else if opcao == 2 {
 
@@ -116,8 +117,8 @@ void doit(int sockfd) {
       for (int i = 1; i < tamanho; i++) {
         printf(" _");
       }
-      printf("\n\nDigite uma letra: ");
-      
+      printf("\n\nDigite uma letra:\n");
+
       while(true) {
         FD_SET(STDIN_FILENO, &fdset);
         FD_SET(sockfd, &fdset);
@@ -125,16 +126,14 @@ void doit(int sockfd) {
         select(maxfds, &fdset, NULL, NULL, NULL);
         if (FD_ISSET(STDIN_FILENO, &fdset) && !esperandoResposta) {
           Readline(STDIN_FILENO, rdline, MAXLINE);
-          printf("\nString lida com sucesso! E ela é %s\n", rdline);
-          letra = rdline[0];
-          printf("Enviando %c...\n", letra);
-          write(sockfd, &letra, 1);
+          write(sockfd, rdline, strlen(rdline));
+          if (strcmp(rdline, EXIT_COMMAND) == 0)
+            return;
           esperandoResposta = true;
         }
-        if (FD_ISSET(sockfd, &fdset)) {
-          printf("\n\nRecebi algo! Vulgo: ");
+        if (FD_ISSET(sockfd, &fdset) && esperandoResposta) {
           Readline(sockfd, recvline, MAXLINE);
-          printf("%s", recvline);
+          printf("\n\nRecebi: %s", recvline);
           esperandoResposta = false;
           break;
         }
