@@ -74,6 +74,8 @@ int main (int argc, char **argv) {
 
       write(connfd, &wordsize, strlen(wordsize));
 
+      printf("Palavra escolhida através do dicionário. \n\n");
+
       if((pid = fork()) == 0) {
          Close(listenfd);
          fclose(fp);
@@ -100,14 +102,14 @@ int find_char(char *str, char c)
    {
       if(str[i]==c)
       {
-         printf("character position:%d\n",i+1);
+//         printf("character position:%d\n",i+1);
          f=i+1;
          break;
       }
    }
    if(f==0)
    {
-      printf("\ncharacter not found\n");
+//      printf("\ncharacter not found\n");
       return(0);
    }
 
@@ -130,7 +132,7 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
          return;
       }
 
-      printf("<%s-%d>: %s\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port), recvline);
+//      printf("<%s-%d>: %s\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port), recvline);
 
       if(strcmp(recvline, EXIT_COMMAND) == 0) {
          break;
@@ -138,14 +140,14 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
 
       position = find_char(word, recvline[0]); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
 
-      printf("position = %d\n", position);
+//      printf("position = %d\n", position);
 
       sprintf(pos, "%d\n", position);
 
-      printf("Enviando %s...\n", pos);
+//      printf("Enviando %s...\n", pos);
 
       write(connfd, &pos, sizeof(pos));
 
-      printf("Enviou %s.\n", pos);
+//      printf("Enviou %s.\n", pos);
    }
 }
