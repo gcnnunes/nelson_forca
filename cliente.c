@@ -77,8 +77,8 @@ int main(int argc, char **argv) {
   servaddr = ClientSockaddrIn(AF_INET, ip, port);
 
   Connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
-  Readline(sockfd, recvline, 2); //recebe o tamanho da palavra do servidor
-  tamanho = recvline[0] - '0';
+  Readline(sockfd, recvline, MAXLINE); //recebe o tamanho da palavra do servidor
+  sscanf(recvline, "%d", &tamanho);
 
   printf("\n\nSeja bem vindo ao jogo de forca do Nelsão!\n \n \nEscolha uma opção: \n1) Iniciar partida simples \n2) Ser carrasco ao iniciar partida \n3) Multiplayer \n \n");
   scanf("%d", &opcao);
@@ -88,22 +88,16 @@ int main(int argc, char **argv) {
     doit(sockfd);
   }
   else {
-    printf("Desculpe, esta opção ainda não está implementada.\n");
+    printf("Desculpe, esta opção não está implementada.\n");
+    write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
   }
-/*     else if opcao == 2 {
-
-   }
-   else {
-
-   }*/
-
    exit(0);
 }
 
 void doit(int sockfd) {
     fd_set fdset;
-    int maxfds, i, letrasRestantes = tamanho;
-    char recvline[MAXLINE], rdline[MAXLINE];
+    int maxfds, i, j, letrasRestantes = tamanho;
+    char recvline[MAXLINE], rdline[MAXLINE], temp[MAXLINE];
     char sendline[MAXLINE], vetorPalavra[tamanho];
     int lines = 0, ch = 0, position = 0;
     bool esperandoResposta = false;
@@ -111,13 +105,11 @@ void doit(int sockfd) {
 
     FD_ZERO(&fdset);
 
-//    vetorPalavra[0] = "_";
     for (int i = 0; i < tamanho; i++)
       vetorPalavra[i] = '_';
 
 
     while(vidas > 0) {
-//      maxfds = sockfd + 1;
       printf("\n============================================\n\n");
       printf("O tamanho da palavra é: %d \n", tamanho);
       printf("Você possui %d vidas.\n", vidas);
@@ -151,24 +143,37 @@ void doit(int sockfd) {
           i = 0;
           while (recvline[i] != '\n') {
             if (recvline[i] == '#') {
-              vidas = 0;
+              vidas = -1;
               printf("Você perdeu o jogo!\n");
               write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
             }
             else if (recvline[i] == '!') {
-              vidas = 0;
+              vidas = -1;
               printf("Parabéns! Você venceu o jogo!\n");
               write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
+
             }
             else if (recvline[i] == ';') {
               i++;
               continue;
             }
+            else if (recvline[i] == '*') {
+              vidas--;
+              printf("Letra inválida!\n");
+            }
             else if (recvline[i] == '0') { // letra chutada não existe na palavra
               vidas--;
             }
             else {
-              position = recvline[i]-'0';
+              j = 0;
+              memset(temp, 0, MAXLINE);
+              temp[j] = recvline[i];
+              while ((recvline[i+1] != ';') && (recvline[i+1] != '\n')) {      //lógica para posições com mais de um digito           
+                i++;
+                j++;
+                temp[j] = recvline[i];
+              }
+              sscanf(temp, "%d", &position);
               vetorPalavra[position-1] = letra;
               letrasRestantes--;
             }
@@ -179,5 +184,9 @@ void doit(int sockfd) {
         }
         // fim do while true
       }
+    }
+    if (vidas != -1) {
+      printf("Você perdeu o jogo!\n");
+      write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
     }
 }

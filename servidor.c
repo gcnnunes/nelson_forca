@@ -8,6 +8,7 @@
 #include <time.h>
 #include <strings.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 
 #include "basic.h"
 #include "socket_helper.h"
@@ -71,10 +72,11 @@ int main (int argc, char **argv) {
       }
 
       sprintf(wordsize, "%lu", strlen(word)-1);
+      strcat(wordsize, "\n"); 
 
       write(connfd, &wordsize, strlen(wordsize));
 
-      printf("Palavra escolhida através do dicionário. \n\n");
+      printf("Palavra escolhida através do dicionário. \n");
 
       if((pid = fork()) == 0) {
          Close(listenfd);
@@ -111,7 +113,6 @@ void find_char(char * word, char c, char * returnString)
    if (strcmp(returnString, "") == 0)
      strcat(returnString, "0");
    strcat(returnString, "\n");
-   printf("%s", returnString);
    return;
 }
 
@@ -126,7 +127,6 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
 //   while ((n = read(connfd, recvline, MAXDATASIZE)) > 0) {
    while (1) {
       n = read(connfd, recvline, MAXDATASIZE);
-      printf("n = %d\n", n);
       recvline[n] = 0;
       if (getpeername(connfd, (struct sockaddr *) &clientaddr, &remoteaddr_len) == -1) {
          perror("getpeername() failed");
@@ -136,13 +136,19 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
 //      printf("<%s-%d>: %s\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port), recvline);
 
       if(strcmp(recvline, EXIT_COMMAND) == 0) {
-         printf("Recebeu exit.\n");
+         printf("Cliente <%s-%d> desconectou.\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port));
          break;
       }
 
       if (n == 2) { // recebeu um caractere
-        find_char(word, recvline[0], sendline); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
-        write(connfd, sendline, strlen(sendline));
+        if(isalpha(recvline[0])) {    //verifica se o caracter recebido é uma letra
+          find_char(word, recvline[0], sendline); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
+          write(connfd, sendline, strlen(sendline));
+        }
+        else {//se não for uma letra, diminui uma vida e avisa o cliente
+          sprintf(sendline, "*\n");
+          write(connfd, sendline, strlen(sendline));
+        }
       }
       else { // recebeu uma tentativa de palavra (ou um \n sozinho invalido)
         if(strcmp(recvline, word) == 0)
