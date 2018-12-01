@@ -9,6 +9,7 @@
 #include <strings.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "basic.h"
 #include "socket_helper.h"
@@ -69,22 +70,23 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  // setup
   ip = argv[1];
   port = atoi(argv[2]);
-
   sockfd = Socket(AF_INET, SOCK_STREAM, 0);
-
   servaddr = ClientSockaddrIn(AF_INET, ip, port);
-
   Connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
-  Readline(sockfd, recvline, MAXLINE); //recebe o tamanho da palavra do servidor
+  // recebe o tamanho da palavra do servidor
+  Readline(sockfd, recvline, MAXLINE);
   sscanf(recvline, "%d", &tamanho);
 
   printf("\n\nSeja bem vindo ao jogo de forca do Nelsão!\n \n \nEscolha uma opção: \n1) Iniciar partida simples \n2) Ser carrasco ao iniciar partida \n3) Multiplayer \n \n");
   scanf("%d", &opcao);
 
   if (opcao == 1) {
-    printf("\nA partida de jogo da forca começou! \n \n");
+    printf("\nUtilize letras para desvendar partes da palavra, e quando achar que tem a resposta digite-a para tentar adivinhá-la!\n");
+    printf("\nLembre que letras com acento e caracteres especiais são inválidos e não farão parte das palavras propostas.\n");
+    printf("\nA partida de jogo da forca começou!\n\n");
     doit(sockfd);
   }
   else {
@@ -96,24 +98,23 @@ int main(int argc, char **argv) {
 
 void doit(int sockfd) {
     fd_set fdset;
-    int maxfds, i, j, letrasRestantes = tamanho;
-    char recvline[MAXLINE], rdline[MAXLINE], temp[MAXLINE];
-    char sendline[MAXLINE], vetorPalavra[tamanho];
-    int lines = 0, ch = 0, position = 0;
-    bool esperandoResposta = false;
-
+    int maxfds, i, j, l, letrasRestantes = tamanho, lines = 0, ch = 0, position = 0;
+    char recvline[MAXLINE], rdline[MAXLINE], temp[MAXLINE], sendline[MAXLINE], vetorPalavra[tamanho];
+    bool esperandoResposta = false, letraUsada[26]; // 70 entrada no vetor letraUsada para incluir extended ascii
 
     FD_ZERO(&fdset);
-
+    // seta as letras iniciais como vazias
     for (int i = 0; i < tamanho; i++)
       vetorPalavra[i] = '_';
+    // setup do vetor de letras ja usadas
+    for (int i = 0; i < 26; i++)
+      letraUsada[i] = false;
 
-
+    // loop principal
     while(vidas > 0) {
       printf("\n============================================\n\n");
       printf("O tamanho da palavra é: %d \n", tamanho);
       printf("Você possui %d vidas.\n", vidas);
-
 
       for (int i = 0; i < tamanho; i++) {
         printf("%c ", vetorPalavra[i]);
@@ -123,52 +124,81 @@ void doit(int sockfd) {
         write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
         return;
       }
-      printf("\n\nDigite uma letra:\n");
+      printf("\n\nDigite uma letra ou chute a palavra:\n");
 
+      // loop de leitura, envio e recebimento
       while(true) {
         FD_SET(STDIN_FILENO, &fdset);
         FD_SET(sockfd, &fdset);
         maxfds = MAX(STDIN_FILENO, sockfd) + 1;
         select(maxfds, &fdset, NULL, NULL, NULL);
+        // atividade no STDIN, só lê se não estiver esperando resposta do servidor
         if (FD_ISSET(STDIN_FILENO, &fdset) && !esperandoResposta) {
           Readline(STDIN_FILENO, rdline, MAXLINE);
+          // recebeu um caractere ascii e um \n
+          if (strlen(rdline) == 2) {
+              if (!isalpha(rdline[0])) { // não é uma letra
+                  printf("\nInsira uma letra ou uma palavra, sem acentos ou espaço, por favor.\n\n");
+                  continue; // volta a esperar input
+              }
+              rdline[0] = tolower(rdline[0]);
+              letra = tolower(rdline[0]);
+              l = letra-'a'; // converte pra posição na tabela ascii relativa ao caractere a
+              if (letraUsada[l]) {
+                printf("\nVocê já tentou utilizar esta letra! Tente novamente:\n");
+                continue; // volta a esperar input
+              }
+              else letraUsada[l] = true; // marca como usada
+          }
+          // caractere não-ascii com \n
+          if ( strlen(rdline) == 3 && !isalpha(rdline[0]) && !isalpha(rdline[1]) ) {
+            printf("\nCaractere inválido! Insira uma letra ou uma palavra, sem acentos ou espaço, por favor.\n");
+            // tira vida e checa se acabou o jogo
+            vidas--;
+            if (vidas <= 0) {
+              printf("Você perdeu o jogo!\n");
+              write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
+              return;
+            }
+            else
+              printf("Você possui %d vidas.\n", vidas);
+              printf("Digite uma letra ou chute a palavra:\n");
+            continue; // volta a esperar input
+          }
           write(sockfd, rdline, strlen(rdline));
           if (strcmp(rdline, EXIT_COMMAND) == 0)
             return;
-          letra = rdline[0];
           esperandoResposta = true;
         }
+
+        // atividade no socket
         if (FD_ISSET(sockfd, &fdset) && esperandoResposta) {
           Readline(sockfd, recvline, MAXLINE);
           i = 0;
+          // itera em cima do que foi recebido para decodificar a string
           while (recvline[i] != '\n') {
-            if (recvline[i] == '#') {
+            if (recvline[i] == '#') { // indicador de derrota
               vidas = -1;
-              printf("Você perdeu o jogo!\n");
+              printf("A palavra que você tentou estava errada. Você perdeu o jogo!\n");
               write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
             }
-            else if (recvline[i] == '!') {
+            else if (recvline[i] == '!') { // indicador de vitoria
               vidas = -1;
-              printf("Parabéns! Você venceu o jogo!\n");
+              printf("Parabéns, palavra correta! Você venceu o jogo!\n");
               write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));
-
             }
-            else if (recvline[i] == ';') {
+            else if (recvline[i] == ';') { // separador na string de resposta
               i++;
               continue;
-            }
-            else if (recvline[i] == '*') {
-              vidas--;
-              printf("Letra inválida!\n");
             }
             else if (recvline[i] == '0') { // letra chutada não existe na palavra
               vidas--;
             }
-            else {
+            else { // letra válida, recebeu uma lista de posições da letra enviada
               j = 0;
               memset(temp, 0, MAXLINE);
               temp[j] = recvline[i];
-              while ((recvline[i+1] != ';') && (recvline[i+1] != '\n')) {      //lógica para posições com mais de um digito           
+              while ((recvline[i+1] != ';') && (recvline[i+1] != '\n')) {  //lógica para posições com mais de um digito
                 i++;
                 j++;
                 temp[j] = recvline[i];
@@ -181,10 +211,9 @@ void doit(int sockfd) {
           }
           esperandoResposta = false;
           break;
-        }
-        // fim do while true
-      }
-    }
+        } // fim do socket
+      } // fim do while true
+    } // fim do while vidas > 0
     if (vidas != -1) {
       printf("Você perdeu o jogo!\n");
       write(sockfd, EXIT_COMMAND, strlen(EXIT_COMMAND));

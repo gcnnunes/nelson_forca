@@ -30,8 +30,6 @@ int main (int argc, char **argv) {
    size_t len = MAXDATASIZE;
    ssize_t read;
 
-
-
    if (argc != 2) {
       strcpy(error,"uso: ");
       strcat(error,argv[0]);
@@ -44,16 +42,11 @@ int main (int argc, char **argv) {
    if (fp == NULL)
       exit(EXIT_FAILURE);
 
+   // setup
    port = atoi(argv[1]);
-
    listenfd = Socket(AF_INET, SOCK_STREAM, 0);
-
-
    servaddr = ServerSockaddrIn(AF_INET, INADDR_ANY, port);
-
-
    Bind(listenfd, (struct sockaddr *) &servaddr, sizeof(servaddr));
-
    Listen(listenfd, LISTENQ);
 
    for ( ; ; ) {
@@ -65,39 +58,36 @@ int main (int argc, char **argv) {
       connfd = Accept(listenfd, (struct sockaddr *) &clientaddr, &clientaddr_len);
 
       word = NULL;
-      if ((read = getline(&word, &len, fp)) == -1) {
+      // pega uma palavra do dicionario
+      if ((read = getline(&word, &len, fp)) == -1) { // fim do arquivo ou falha
         fp = fopen("dicionario.txt","r"); // loop pro começo do arquivo
         if ((read = getline(&word, &len, fp)) == -1) // se falhar mesmo tentando abrir o arquivo de novo
             exit(EXIT_FAILURE);
       }
 
+      // indica tamanho da palavra pro cliente mostrar para o usuario
       sprintf(wordsize, "%lu", strlen(word)-1);
-      strcat(wordsize, "\n"); 
+      strcat(wordsize, "\n");
 
       write(connfd, &wordsize, strlen(wordsize));
-
-      printf("Palavra escolhida através do dicionário. \n");
 
       if((pid = fork()) == 0) {
          Close(listenfd);
          fclose(fp);
-
+         // logica dos processos filhos
          doit(connfd, clientaddr, word);
          Close(connfd);
-
          exit(0);
       }
-
       free(word);
       Close(connfd);
    }
-
    fclose(fp);
    return(0);
 }
 
-void find_char(char * word, char c, char * returnString)
-{
+// Verifica se c está em word; se estiver, retorna uma string indicando as posições de todas ocorrencias
+void find_char(char * word, char c, char * returnString) {
    int i, f=0, lenf=0;
    char temp[MAXDATASIZE];
    lenf = strlen(word);
@@ -124,7 +114,6 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
    char pos[2];
    socklen_t remoteaddr_len = sizeof(clientaddr);
 
-//   while ((n = read(connfd, recvline, MAXDATASIZE)) > 0) {
    while (1) {
       n = read(connfd, recvline, MAXDATASIZE);
       recvline[n] = 0;
@@ -133,8 +122,7 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
          return;
       }
 
-//      printf("<%s-%d>: %s\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port), recvline);
-
+      // comando de finalização
       if(strcmp(recvline, EXIT_COMMAND) == 0) {
          printf("Cliente <%s-%d> desconectou.\n", inet_ntoa(clientaddr.sin_addr),(int) ntohs(clientaddr.sin_port));
          break;
@@ -145,12 +133,12 @@ void doit(int connfd, struct sockaddr_in clientaddr, char *word) {
           find_char(word, recvline[0], sendline); //procura na palavra a letra recebida do cliente e retorna as posições encontradas
           write(connfd, sendline, strlen(sendline));
         }
-        else {//se não for uma letra, diminui uma vida e avisa o cliente
+        else { //se não for uma letra, diminui uma vida e avisa o cliente
           sprintf(sendline, "*\n");
           write(connfd, sendline, strlen(sendline));
         }
       }
-      else { // recebeu uma tentativa de palavra (ou um \n sozinho invalido)
+      else { // recebeu uma tentativa de palavra
         if(strcmp(recvline, word) == 0)
           sprintf(sendline, "!\n"); // sinaliza que ganhou o jogo
         else
