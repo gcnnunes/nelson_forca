@@ -1,5 +1,4 @@
-# Título do Projeto
-Jogo de Forca em Redes - MC833
+# Jogo de Forca em Redes - MC833
 
 ## Começando o Jogo
 Abra um terminal na pasta onde estão os arquivos fonte e execute o comando make.
@@ -16,17 +15,17 @@ Abra mais um terminal e execute o arquivo executável do cliente passando por pa
 N/A
 
 ## Feito com
-Sublime
-Atom
-Linux
+* Sublime
+* Atom
+* Linux
 
 
 ## Versionamento
 Github
 
 ## Autores
-Caio Teixeira 
-Gustavo Nunes
+* Caio Teixeira 
+* Gustavo Nunes
 
 ## Licença
 Projeto desenvolvido em 30/11/2018 para a disciplina MC833 - Laboratório de Redes da Universidade de Campinas (UNICAMP)
