@@ -1,6 +1,4 @@
-# nelson_forca
-
-# Titulo do Projeto
+# Título do Projeto
 Joco de Forca em Redes - MC833
 
 ## Começando o Jogo
