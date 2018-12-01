@@ -21,7 +21,7 @@ N/A
 
 
 ## Versionamento
-Github
+* Github
 
 ## Autores
 * Caio Teixeira 
