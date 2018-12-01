@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
 void doit(int sockfd) {
     fd_set fdset;
     int maxfds, i, j, l, letrasRestantes = tamanho, lines = 0, ch = 0, position = 0;
-    char recvline[MAXLINE], rdline[MAXLINE], temp[MAXLINE], sendline[MAXLINE], vetorPalavra[tamanho];
+    char recvline[MAXLINE], rdline[MAXLINE], temp[MAXLINE], vetorPalavra[tamanho];
     bool esperandoResposta = false, letraUsada[26]; // 70 entrada no vetor letraUsada para incluir extended ascii
 
     FD_ZERO(&fdset);
